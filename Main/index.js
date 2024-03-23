@@ -9,8 +9,8 @@ var jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const genAI = new GoogleGenerativeAI('AIzaSyC93XxpL8z7dz4UjNBvECFYaobAOQre0Bk');
-const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+const genAI = new GoogleGenerativeAI("AIzaSyC93XxpL8z7dz4UjNBvECFYaobAOQre0Bk");
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 connectToMongo();
 const app = express();
@@ -75,7 +75,7 @@ app.post(
       return res.status(400).json({ errors: errors.array() });
     }
     const { email, password } = req.body;
-    console.log(email)
+    console.log(email);
     try {
       const user = await User.findOne({ email });
       if (!user) {
@@ -106,72 +106,79 @@ app.post(
   }
 );
 
-app.post('/add-chat', (req, res) => {
-  const body = req.body
-  Chat.findOne({userId: body.userId, chatId: body.chatId}).then(async (result, err) => {
-    if(result) {
-      Chat.findOneAndUpdate({chatId: body.chatId}, {chats: body.chats}).then((final, err) => {
-        if (err) {
-          res.send(err);
-        } else {
-          res.send({ message: "Chat updated successfully", data: final });
-        }
-      })
-    } else {
-      Chat.insertMany({
-        userId: body.userId,
-        chatId: body.chatId,
-        chats: body.chats
-      })
-      .then(() => {
-        res.send({ message: "Added!" });
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+app.post("/add-chat", (req, res) => {
+  const body = req.body;
+  Chat.findOne({ userId: body.userId, chatId: body.chatId }).then(
+    async (result, err) => {
+      if (result) {
+        Chat.findOneAndUpdate(
+          { chatId: body.chatId },
+          { chats: body.chats }
+        ).then((final, err) => {
+          if (err) {
+            res.send(err);
+          } else {
+            res.send({ message: "Chat updated successfully", data: final });
+          }
+        });
+      } else {
+        Chat.insertMany({
+          userId: body.userId,
+          chatId: body.chatId,
+          chats: body.chats,
+        })
+          .then(() => {
+            res.send({ message: "Added!" });
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+      }
     }
-  })
-})
+  );
+});
 
-app.get('/get-chats', (req, res) => {
-  const query = req.query
-  Chat.find({userId: query.userId}).then((result, err) => {
-    if(result) {
-      res.send(result)
+app.get("/get-chats", (req, res) => {
+  const query = req.query;
+  Chat.find({ userId: query.userId }).then((result, err) => {
+    if (result) {
+      const uniqueArray = result.filter(
+        (obj, index, self) =>
+          index === self.findIndex((o) => o.chatId === obj.chatId)
+      );
+      res.send(uniqueArray);
     } else {
-      res.send(err)
+      res.send(err);
     }
-  })
-})
+  });
+});
 
-app.get('/get-single-chat', (req, res) => {
-  const query = req.query
-  Chat.find({chatId: query.chatId}).then((result, err) => {
-    if(result) {
-      res.send(result)
+app.get("/get-single-chat", (req, res) => {
+  const query = req.query;
+  Chat.find({ chatId: query.chatId }).then((result, err) => {
+    if (result) {
+      res.send(result);
     } else {
-      res.send(err)
+      res.send(err);
     }
-  })
-})
+  });
+});
 
 app.post("/generate", async (req, res) => {
-  const query = req.body 
-  const previousHistory = req.body.history
-  let history = []
+  const query = req.body;
+  const previousHistory = req.body.history;
+  let history = [];
 
   previousHistory?.map((item) => {
-    history.push({"role": "user", parts: [{text: item?.question}]}, {"role": "model", parts: [{text: item?.answer}]})
-  })
-
-  const chat = model.startChat({
-    history: history
+    history.push(
+      { role: "user", parts: [{ text: item?.question }] },
+      { role: "model", parts: [{ text: item?.answer }] }
+    );
   });
 
-  // const result = await model.generateContent(query.prompt);
-  // const response = await result.response;
-  // const text = response.text();
-  // console.log(text);
+  const chat = model.startChat({
+    history: history,
+  });
 
   const result = await chat.sendMessage(query.prompt);
 
@@ -179,8 +186,8 @@ app.post("/generate", async (req, res) => {
   const text = response.text();
 
   console.log(text);
-  res.send({gen_response: text})
-})
+  res.send({ gen_response: text });
+});
 
 app.get("/", (req, res) => {
   res.send("Hi!");
@@ -189,4 +196,3 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Listening at http://localhost:${port}`);
 });
-
