@@ -8,6 +8,10 @@ const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const multer = require('multer');
+const fs = require('fs');
+const FormData = require('form-data');
+const { createClient } = require('@deepgram/sdk');
 
 const genAI = new GoogleGenerativeAI("AIzaSyDA81TLlcAGD2dUoVULTgrF64OXFBi4Sqo");
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
@@ -20,6 +24,40 @@ app.use(express.json());
 app.use(cors());
 
 const jwt_secret = "88465123";
+
+const upload = multer({ dest: 'uploads/' });
+
+const deepgram = createClient("de10d40c71916b9b72f24b8bcdf77be587f26eb4");
+
+app.post('/transcribe', async (req, res) => {
+  const { audioUrl } = req.body;
+
+  if (!audioUrl) {
+    return res.status(400).send('No audio URL provided');
+  }
+
+  try {
+    const { result, error } = await deepgram.listen.prerecorded.transcribeUrl(
+      { url: audioUrl },
+      {
+        model: 'nova-2',
+        language: 'en',
+        smart_format: true,
+      }
+    );
+
+    if (error) {
+      console.error('Transcription error:', error);
+      return res.status(500).json({ error: 'Transcription failed' });
+    }
+
+    const transcript = result.results.channels[0].alternatives[0].transcript;
+    res.json({ transcript });
+  } catch (err) {
+    console.error('Error during transcription:', err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+});
 
 app.post(
   "/signup",
@@ -191,6 +229,7 @@ app.post("/generate", async (req, res) => {
   console.log(text);
   res.send({ gen_response: text });
 });
+
 
 app.get("/", (req, res) => {
   res.send("Hi!");
