@@ -9,7 +9,7 @@ var jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const genAI = new GoogleGenerativeAI("AIzaSyC93XxpL8z7dz4UjNBvECFYaobAOQre0Bk");
+const genAI = new GoogleGenerativeAI("AIzaSyDA81TLlcAGD2dUoVULTgrF64OXFBi4Sqo");
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 connectToMongo();
@@ -165,7 +165,7 @@ app.get("/get-single-chat", (req, res) => {
 });
 
 app.post("/generate", async (req, res) => {
-  const query = req.body;
+  const query = req.body.prompt;
   const previousHistory = req.body.history;
   let history = [];
 
@@ -176,11 +176,14 @@ app.post("/generate", async (req, res) => {
     );
   });
 
+  // console.log(history)
+
   const chat = model.startChat({
     history: history,
   });
-
-  const result = await chat.sendMessage(query.prompt);
+  console.log(query.prompt)
+  const result = await chat.sendMessage(query);
+  console.log(result)
 
   const response = await result.response;
   const text = response.text();
